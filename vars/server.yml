@@ -1,0 +1,11 @@
+--- 
+# vars for satellite_maintenance
+
+server_url: http://your_satellite_url
+organization: 'your_org'
+validate_certs: false
+foreman_env:
+  FOREMAN_USERNAME: "{{ satellite_admin_user }}"
+  FOREMAN_PASSWORD: "{{ satellite_admin_password }}"
+  FOREMAN_SERVER_URL: "{{ server_url }}"
+  FOREMAN_VALIDATE_CERTS: false

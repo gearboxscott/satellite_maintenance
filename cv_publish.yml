@@ -1,0 +1,34 @@
+---
+# cv_publish.yml for satellite
+
+- name: Clean Up Satellite Content Views
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+  environment: "{{ foreman_env }}"
+
+  tasks:
+  - name: Find All CVs
+    theforeman.foreman.resource_info:
+      resource: content_views
+    register: content_views_list
+  
+  - name: Print Out Content View
+    debug:
+      msg: '{{ item.name }}'
+    with_items:
+      - "{{ content_views_list.resources }}"
+    when: 
+      - item.name != 'Default Organization View'
+      - item.composite == false
+
+  - name: Publish New Versions of the Content Views
+    theforeman.foreman.content_view_version:
+      organization: '{{ organization }}'
+      content_view: '{{ item.name }}'
+    with_items:
+      - "{{ content_views_list.resources }}" 
+    when: 
+      - item.name != 'Default Organization View'
+      - item.composite == false

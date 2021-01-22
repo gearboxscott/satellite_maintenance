@@ -1,0 +1,15 @@
+---
+# cv_cleanup.yml for satellite
+
+- name: Clean Up Satellite Content Views
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+
+  roles:
+    - name: remove all unused content views
+      role: theforeman.foreman.content_view_version_cleanup
+      vars:
+        content_view_version_cleanup_keep: '{{ survey_content_view_version_cleanup_keep }}' 
+        content_view_version_cleanup_search: '{{ survey_content_view_version_cleanup_search }}'

@@ -1,54 +1,125 @@
-satellite_maintenance Project
+satellite_maintenance
 =========
 
-A brief description of the project satellite goes here.
+This repository is a collection of Ansible playbooks that can be used from Ansible Tower to do things like the following:
+
+* Publish new versions of Content Views and Composite Content Views called `cv_publish.yml`
+* Remove old Content Views and Composite Content Views call `cv_cleanup.yml`
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the project should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+---
 
-satellite Variables
+This playbook or playbooks require the `theforeman.foreman` ansible collection. So add the following to the `requirements.yml` under the collections directory:
+
+```
+collections:
+  - name: theforeman.foreman
+```
+
+See this website for documentation:
+
+[foreman-ansible-modules](https://github.com/theforeman/foreman-ansible-modules)
+
+satellite_maintenance Variables
 --------------
 
-A description of the settable variables for this project should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+---
+
+`cv_cleanup.yml` requires two variable to be passed on the command-line or an User Survey in Ansible Tower in a template:
+
+* `survey_content_view_version_cleanup_keep` -- is the number of versions of Content Views or Composite Content Views to keep.
+
+* `survey_content_view_version_cleanup_search` -- is a search critria that can be used in the following manner:
+
+  `name ~ some_view`
+
+
 
 Dependencies
 ------------
+---
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+See above in the Requirements sections.
 
 satellite Project Playbook
 ----------------
 
-Including an example of how to use your project (for instance, with variables passed in as parameters) is always nice for users too:
+Here is the `cv_cleanup.yml` playbook:
 
-    - name: Project satellite
-      hosts: all
-      gather_facts: no
-    
-      tasks:
-      - name: Gather Facts
-        setup:
-    
-      # Some description of the task
-      - name: some role
-        include_role:
-          name: some role
-          apply:
-            tags:
-              - some tag
-        vars:
-          # add variables if needed else delete entire section
-        tags:
-          - always
+```
+---
+# cv_cleanup.yml for satellite
+
+- name: Clean Up Satellite Content Views
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+
+  roles:
+    - name: remove all unused content views
+      role: theforeman.foreman.content_view_version_cleanup
+      vars:
+        content_view_version_cleanup_keep: '{{ survey_content_view_version_cleanup_keep }}' 
+        content_view_version_cleanup_search: '{{ survey_content_view_version_cleanup_search }}'
+
+```
+
+Here is the `cv_publish.yml` playbook:
+
+```
+---
+# cv_publish.yml for satellite
+
+- name: Clean Up Satellite Content Views
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+  environment: "{{ foreman_env }}"
+
+  tasks:
+  - name: Find All CVs
+    theforeman.foreman.resource_info:
+      resource: content_views
+    register: content_views_list
+  
+  - name: Print Out Content View
+    debug:
+      msg: '{{ item.name }}'
+    with_items:
+      - "{{ content_views_list.resources }}"
+    when: 
+      - item.name != 'Default Organization View'
+      - item.composite == false
+
+  - name: Publish New Versions of the Content Views
+    theforeman.foreman.content_view_version:
+      organization: '{{ organization }}'
+      content_view: '{{ item.name }}'
+    with_items:
+      - "{{ content_views_list.resources }}" 
+    when: 
+      - item.name != 'Default Organization View'
+      - item.composite == false
+
+```
 
 License
 -------
+---
 
 GPL
 
 Author Information
 ------------------
+---
 
-An optional section for the project authors to include contact information, or a website (HTML is not allowed).
+Scott Parker - Red Hat North American Consulting
+
+Credits
+-------------------
+---
+Credit goes to the authors for the [foreman-ansible-modules](https://github.com/theforeman/foreman-ansible-modules) 
